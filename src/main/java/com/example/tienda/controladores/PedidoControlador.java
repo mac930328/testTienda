@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Service
 public class PedidoControlador {
@@ -26,12 +27,11 @@ public class PedidoControlador {
     public Pedido guardar(Pedido pedido) {
         if (pedido.getOrden() == null) {
             pedido.setFechaPedido(new Date());
-            //double suma = 0;
-            pedido.getProductos().stream().map(producto -> {
-                double suma = 0;
-                suma += producto.getPrecio();
-                return suma;
-            }).map(suma -> pedido.setTotal(suma));
+            AtomicReference<Double> suma = new AtomicReference<>((double) 0);
+            pedido.getProductos().forEach(producto -> {
+                suma.updateAndGet(v -> new Double((double) (v + producto.getPrecio())));
+            });
+            pedido.setTotal(suma.get());
             return repositorio.guardarActualizar(pedido);
         } else {
             Optional<Pedido> p = repositorio.obtenerId(pedido.getOrden());
